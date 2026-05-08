@@ -7,3 +7,4 @@ Run the marble example (from the crate root):
 ```sh
 cargo run --example marble_sphere
 ```
+<img width="1283" height="749" alt="Screenshot 2026-05-07 at 5 07 56 PM" src="https://github.com/user-attachments/assets/e02fcab2-23f3-43cd-b9ef-417d6aec66e0" />
