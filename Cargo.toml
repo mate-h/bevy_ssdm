@@ -2,7 +2,7 @@
 name = "bevy_ssdm"
 version = "0.1.0"
 edition = "2021"
-description = "Screen-space displacement mapping (SSDM) for Bevy 0.18"
+description = "Screen-space displacement mapping (SSDM) for Bevy 0.19"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
@@ -10,8 +10,9 @@ readme = "README.md"
 path = "src/lib.rs"
 
 [dependencies]
-bevy = { version = "0.18.1", default-features = true, features = [
+bevy = { version = "0.19.0", default-features = true, features = [
     "bevy_core_pipeline",
+    "bevy_material",
     "bevy_pbr",
     "bevy_render",
     "jpeg",

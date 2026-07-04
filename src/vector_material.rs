@@ -8,6 +8,7 @@ use bevy::render::render_resource::{
     AsBindGroup, ColorWrites, CompareFunction, RenderPipelineDescriptor, ShaderType,
     SpecializedMeshPipelineError,
 };
+use bevy::material::{AlphaMode, OpaqueRendererMethod};
 use bevy::shader::ShaderRef;
 
 const SSDM_VECTOR_SHADER: &str = "shaders/ssdm_vector.wgsl";
@@ -41,12 +42,12 @@ impl Material for SsdmVectorMaterial {
         SSDM_VECTOR_SHADER.into()
     }
 
-    fn alpha_mode(&self) -> bevy::render::alpha::AlphaMode {
-        bevy::render::alpha::AlphaMode::Opaque
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Opaque
     }
 
-    fn opaque_render_method(&self) -> bevy::pbr::OpaqueRendererMethod {
-        bevy::pbr::OpaqueRendererMethod::Deferred
+    fn opaque_render_method(&self) -> OpaqueRendererMethod {
+        OpaqueRendererMethod::Deferred
     }
 
     fn enable_prepass() -> bool {
@@ -71,10 +72,10 @@ impl Material for SsdmVectorMaterial {
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         if let Some(ds) = descriptor.depth_stencil.as_mut() {
-            ds.depth_write_enabled = false;
+            ds.depth_write_enabled = Some(false);
             // Match mesh / deferred prepass (reverse-Z): Bevy uses GreaterEqual everywhere here.
             // Less/ LessEqual disagrees with that test and can drop the whole pass vs prepass depth.
-            ds.depth_compare = CompareFunction::GreaterEqual;
+            ds.depth_compare = Some(CompareFunction::GreaterEqual);
         }
         if let Some(fs) = descriptor.fragment.as_mut() {
             for target in &mut fs.targets {
