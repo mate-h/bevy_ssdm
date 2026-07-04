@@ -1,4 +1,4 @@
-//! Screen-space displacement mapping (SSDM) for Bevy 0.18.
+//! Screen-space displacement mapping (SSDM) for Bevy 0.19.
 //!
 //! **Deferred rendering only** — adding [`SsdmPlugin`] sets [`DefaultOpaqueRendererMethod`](bevy::pbr::DefaultOpaqueRendererMethod) to
 //! deferred. Use a [`DeferredPrepass`](bevy::core_pipeline::prepass::DeferredPrepass) (and typically

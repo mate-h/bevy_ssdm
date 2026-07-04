@@ -4,17 +4,23 @@ use crate::marker::SsdmVectorSurface;
 use crate::vector_phase::SsdmVector3d;
 use bevy::core_pipeline::core_3d::{Opaque3dBatchSetKey, Opaque3dBinKey};
 use bevy::ecs::prelude::*;
+use bevy::material::RenderPhaseType;
 use bevy::mesh::Mesh3d;
 use bevy::pbr::{
-    MainPassOpaqueDrawFunction, PreparedMaterial, RenderMaterialInstances, RenderMeshInstances,
-    RenderPhaseType, SpecializedMaterialPipelineCache,
+    MainPassOpaqueDrawFunction, PendingMeshMaterialQueues, PreparedMaterial,
+    RenderMaterialInstances, RenderMeshInstances, SpecializedMaterialPipelineCache,
 };
 use bevy::platform::collections::HashSet;
-use bevy::prelude::{Deref, DerefMut};
+use bevy::prelude::{Deref, DerefMut, Entity};
 use bevy::render::{
-    batching::gpu_preprocessing::GpuPreprocessingSupport, erased_render_asset::ErasedRenderAssets,
-    mesh::allocator::MeshAllocator, render_phase::ViewBinnedRenderPhases, sync_world::MainEntity,
-    view::visibility::RenderVisibleEntities, view::ExtractedView,
+    batching::gpu_preprocessing::GpuPreprocessingSupport,
+    camera::DirtySpecializations,
+    erased_render_asset::ErasedRenderAssets,
+    mesh::allocator::MeshAllocator,
+    render_phase::{BinnedRenderPhaseType, ViewBinnedRenderPhases},
+    sync_world::MainEntity,
+    view::visibility::RenderVisibleEntities,
+    view::ExtractedView,
 };
 
 #[derive(Resource, Default, Deref, DerefMut)]
@@ -41,6 +47,8 @@ pub fn queue_ssdm_vector_meshes(
     views: Query<(&ExtractedView, &RenderVisibleEntities)>,
     vector_entities: Res<SsdmVectorMainEntities>,
     specialized_material_pipeline_cache: Res<SpecializedMaterialPipelineCache>,
+    dirty_specializations: Res<DirtySpecializations>,
+    mut pending_mesh_material_queues: ResMut<PendingMeshMaterialQueues>,
 ) {
     for (view, visible_entities) in &views {
         let Some(ssdm_phase) = ssdm_phases.get_mut(&view.retained_view_entity) else {
@@ -52,30 +60,53 @@ pub fn queue_ssdm_vector_meshes(
             continue;
         };
 
-        for (render_entity, visible_entity) in visible_entities.iter::<Mesh3d>() {
+        let Some(render_visible_mesh_entities) = visible_entities.get::<Mesh3d>() else {
+            continue;
+        };
+
+        let Some(view_pending_mesh_material_queues) =
+            pending_mesh_material_queues.get_mut(&view.retained_view_entity)
+        else {
+            continue;
+        };
+
+        for &main_entity in dirty_specializations
+            .iter_to_dequeue(view.retained_view_entity, render_visible_mesh_entities)
+        {
+            ssdm_phase.remove(main_entity);
+        }
+
+        for (render_entity, visible_entity) in dirty_specializations.iter_to_queue(
+            view.retained_view_entity,
+            render_visible_mesh_entities,
+            &view_pending_mesh_material_queues.prev_frame,
+        ) {
             if !vector_entities.0.contains(visible_entity) {
                 continue;
             }
 
-            let Some((current_change_tick, pipeline_id)) =
-                view_specialized.get(visible_entity).map(|(t, p)| (*t, *p))
-            else {
+            let Some(pipeline_id) = view_specialized.get(visible_entity).copied() else {
                 continue;
             };
 
-            if ssdm_phase.validate_cached_entity(*visible_entity, current_change_tick) {
-                continue;
-            }
-
             let Some(material_instance) = render_material_instances.instances.get(visible_entity)
             else {
+                view_pending_mesh_material_queues
+                    .current_frame
+                    .insert((*render_entity, *visible_entity));
                 continue;
             };
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*visible_entity)
             else {
+                view_pending_mesh_material_queues
+                    .current_frame
+                    .insert((*render_entity, *visible_entity));
                 continue;
             };
             let Some(material) = render_materials.get(material_instance.asset_id) else {
+                view_pending_mesh_material_queues
+                    .current_frame
+                    .insert((*render_entity, *visible_entity));
                 continue;
             };
 
@@ -93,18 +124,19 @@ pub fn queue_ssdm_vector_meshes(
                 continue;
             };
 
-            let (vertex_slab, index_slab) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id);
+            let Some(mesh_slabs) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id()) else {
+                continue;
+            };
 
             let batch_set_key = Opaque3dBatchSetKey {
                 pipeline: pipeline_id,
                 draw_function,
                 material_bind_group_index: Some(material.binding.group.0),
-                vertex_slab: vertex_slab.unwrap_or_default(),
-                index_slab,
-                lightmap_slab: mesh_instance.shared.lightmap_slab_index.map(|i| *i),
+                slabs: mesh_slabs,
+                lightmap_slab: mesh_instance.lightmap_slab_index().map(|index| *index),
             };
             let bin_key = Opaque3dBinKey {
-                asset_id: mesh_instance.mesh_asset_id.into(),
+                asset_id: mesh_instance.mesh_asset_id().into(),
             };
 
             ssdm_phase.add(
@@ -112,11 +144,10 @@ pub fn queue_ssdm_vector_meshes(
                 bin_key,
                 (*render_entity, *visible_entity),
                 mesh_instance.current_uniform_index,
-                bevy::render::render_phase::BinnedRenderPhaseType::mesh(
+                BinnedRenderPhaseType::mesh(
                     mesh_instance.should_batch(),
                     &gpu_preprocessing_support,
                 ),
-                current_change_tick,
             );
         }
     }

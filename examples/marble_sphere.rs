@@ -3,15 +3,18 @@
 //! PBR maps and displacement are loaded from [`../assets/marble_cliff_03_1k/textures/`], matching
 //! the glTF image URIs (`diff` / `arm` JPG, `nor_gl` PNG, `disp` JPG).
 use bevy::anti_alias::smaa::Smaa;
+use bevy::audio::AudioPlugin;
 use bevy::camera::Exposure;
 use bevy::core_pipeline::prepass::{DeferredPrepass, DepthPrepass};
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::light::light_consts::lux;
-use bevy::light::AtmosphereEnvironmentMapLight;
+use bevy::light::{
+    atmosphere::ScatteringMedium, light_consts::lux, Atmosphere, AtmosphereEnvironmentMapLight,
+};
 use bevy::mesh::primitives::SphereKind;
-use bevy::pbr::{Atmosphere, AtmosphereSettings, DefaultOpaqueRendererMethod, ScatteringMedium};
+use bevy::pbr::{AtmosphereSettings, DefaultOpaqueRendererMethod};
 use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
+use bevy::render::view::screenshot::{save_to_disk, Screenshot, ScreenshotCaptured};
 use bevy_ssdm::{
     SsdmPlugin, SsdmSettings, SsdmVectorMaterial, SsdmVectorParams, SsdmVectorSurface, SsdmView,
 };
@@ -25,15 +28,20 @@ mod marble_assets {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(AssetPlugin {
-            file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
+                    ..default()
+                })
+                .build()
+                .disable::<AudioPlugin>(),
+        )
         // Opaque meshes use the deferred G-buffer path (global resource).
         .insert_resource(DefaultOpaqueRendererMethod::deferred())
         .add_plugins(SsdmPlugin)
         .add_systems(Startup, setup)
-        .add_systems(Update, spin_camera)
+        .add_systems(Update, (spin_camera, auto_screenshot))
         .run();
 }
 
@@ -98,6 +106,8 @@ fn setup(
     ));
 
     let medium = scattering_mediums.add(ScatteringMedium::default());
+    commands.spawn(Atmosphere::earth(medium));
+
     commands.spawn((
         Camera3d::default(),
         // Bevy's deferred path is single-sample (the deferred render targets are not
@@ -106,7 +116,6 @@ fn setup(
         Msaa::Off,
         Projection::default(),
         Transform::from_xyz(0.0, 0.0, 5.2).looking_at(Vec3::ZERO, Vec3::Y),
-        Atmosphere::earthlike(medium),
         AtmosphereSettings::default(),
         AtmosphereEnvironmentMapLight::default(),
         Exposure { ev100: 13.0 },
@@ -127,6 +136,25 @@ fn setup(
         // ghost-free as the camera spins around the sphere.
         Smaa::default(),
     ));
+}
+
+/// When `SSDM_SCREENSHOT=1`, saves a screenshot after a few frames (for CI / headless capture).
+fn auto_screenshot(mut commands: Commands, time: Res<Time>, mut scheduled: Local<bool>) {
+    if std::env::var("SSDM_SCREENSHOT").ok().as_deref() != Some("1") {
+        return;
+    }
+    if *scheduled || time.elapsed_secs() < 10.0 {
+        return;
+    }
+    *scheduled = true;
+    let path = std::env::var("SSDM_SCREENSHOT_PATH")
+        .unwrap_or_else(|_| "/opt/cursor/artifacts/screenshots/marble_sphere.png".to_string());
+    commands.spawn(Screenshot::primary_window()).observe(
+        move |screenshot: On<ScreenshotCaptured>, mut commands: Commands| {
+            save_to_disk(&path)(screenshot);
+            commands.write_message(AppExit::Success);
+        },
+    );
 }
 
 fn spin_camera(time: Res<Time>, mut q: Query<&mut Transform, With<SsdmView>>) {
