@@ -1,5 +1,6 @@
 //! Displacement vector material: rendered into pyramid A0 between deferred prepass and lighting.
 
+use bevy::material::{AlphaMode, OpaqueRendererMethod};
 use bevy::mesh::{Mesh, MeshVertexBufferLayoutRef};
 use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey};
 use bevy::prelude::*;
@@ -8,7 +9,6 @@ use bevy::render::render_resource::{
     AsBindGroup, ColorWrites, CompareFunction, RenderPipelineDescriptor, ShaderType,
     SpecializedMeshPipelineError,
 };
-use bevy::material::{AlphaMode, OpaqueRendererMethod};
 use bevy::shader::ShaderRef;
 
 const SSDM_VECTOR_SHADER: &str = "shaders/ssdm_vector.wgsl";

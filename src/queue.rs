@@ -4,6 +4,7 @@ use crate::marker::SsdmVectorSurface;
 use crate::vector_phase::SsdmVector3d;
 use bevy::core_pipeline::core_3d::{Opaque3dBatchSetKey, Opaque3dBinKey};
 use bevy::ecs::prelude::*;
+use bevy::material::RenderPhaseType;
 use bevy::mesh::Mesh3d;
 use bevy::pbr::{
     MainPassOpaqueDrawFunction, PendingMeshMaterialQueues, PreparedMaterial,
@@ -21,7 +22,6 @@ use bevy::render::{
     view::visibility::RenderVisibleEntities,
     view::ExtractedView,
 };
-use bevy::material::RenderPhaseType;
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct SsdmVectorMainEntities(pub HashSet<MainEntity>);
@@ -70,10 +70,9 @@ pub fn queue_ssdm_vector_meshes(
             continue;
         };
 
-        for &main_entity in dirty_specializations.iter_to_dequeue(
-            view.retained_view_entity,
-            render_visible_mesh_entities,
-        ) {
+        for &main_entity in dirty_specializations
+            .iter_to_dequeue(view.retained_view_entity, render_visible_mesh_entities)
+        {
             ssdm_phase.remove(main_entity);
         }
 
@@ -134,9 +133,7 @@ pub fn queue_ssdm_vector_meshes(
                 draw_function,
                 material_bind_group_index: Some(material.binding.group.0),
                 slabs: mesh_slabs,
-                lightmap_slab: mesh_instance
-                    .lightmap_slab_index()
-                    .map(|index| *index),
+                lightmap_slab: mesh_instance.lightmap_slab_index().map(|index| *index),
             };
             let bin_key = Opaque3dBinKey {
                 asset_id: mesh_instance.mesh_asset_id().into(),

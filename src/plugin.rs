@@ -70,11 +70,7 @@ impl Plugin for SsdmPlugin {
             .add_systems(RenderStartup, init_ssdm_post_pipeline)
             .add_systems(
                 Core3d,
-                (
-                    ssdm_vector_pass,
-                    ssdm_pyramid_pass,
-                    ssdm_gbuffer_warp,
-                )
+                (ssdm_vector_pass, ssdm_pyramid_pass, ssdm_gbuffer_warp)
                     .chain()
                     .after(late_deferred_prepass)
                     .before(main_transparent_pass_3d)

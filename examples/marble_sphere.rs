@@ -10,8 +10,8 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::{
     atmosphere::ScatteringMedium, light_consts::lux, Atmosphere, AtmosphereEnvironmentMapLight,
 };
-use bevy::pbr::{AtmosphereSettings, DefaultOpaqueRendererMethod};
 use bevy::mesh::primitives::SphereKind;
+use bevy::pbr::{AtmosphereSettings, DefaultOpaqueRendererMethod};
 use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot, ScreenshotCaptured};
@@ -147,9 +147,8 @@ fn auto_screenshot(mut commands: Commands, time: Res<Time>, mut scheduled: Local
         return;
     }
     *scheduled = true;
-    let path = std::env::var("SSDM_SCREENSHOT_PATH").unwrap_or_else(|_| {
-        "/opt/cursor/artifacts/screenshots/marble_sphere.png".to_string()
-    });
+    let path = std::env::var("SSDM_SCREENSHOT_PATH")
+        .unwrap_or_else(|_| "/opt/cursor/artifacts/screenshots/marble_sphere.png".to_string());
     commands.spawn(Screenshot::primary_window()).observe(
         move |screenshot: On<ScreenshotCaptured>, mut commands: Commands| {
             save_to_disk(&path)(screenshot);

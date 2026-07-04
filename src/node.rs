@@ -258,22 +258,16 @@ pub fn ssdm_vector_pass(
     mut ctx: RenderContext,
 ) {
     let view_entity = view.entity();
-    let (
-        camera,
-        extracted_view,
-        depth,
-        _view_uniform_offset,
-        resolution_override,
-        ssdm_settings,
-    ) = view.into_inner();
+    let (camera, extracted_view, depth, _view_uniform_offset, resolution_override, ssdm_settings) =
+        view.into_inner();
     let Some(settings) = ssdm_settings else {
         return;
     };
     if settings.enabled == 0 {
         return;
     }
-    let Some(phases) = world
-        .get_resource::<bevy::render::render_phase::ViewBinnedRenderPhases<SsdmVector3d>>()
+    let Some(phases) =
+        world.get_resource::<bevy::render::render_phase::ViewBinnedRenderPhases<SsdmVector3d>>()
     else {
         return;
     };
@@ -357,12 +351,10 @@ pub fn ssdm_gbuffer_warp(
     let scratch_res = world.resource::<SsdmGBufferScratch>();
     let gpu_images = world.resource::<RenderAssets<GpuImage>>();
 
-    let Some(mrt_pl) = pipeline_cache.get_render_pipeline(post.gbuffer_warp_mrt_pipeline)
-    else {
+    let Some(mrt_pl) = pipeline_cache.get_render_pipeline(post.gbuffer_warp_mrt_pipeline) else {
         return;
     };
-    let Some(depth_warp_pl) =
-        pipeline_cache.get_render_pipeline(post.prepass_depth_warp_pipeline)
+    let Some(depth_warp_pl) = pipeline_cache.get_render_pipeline(post.prepass_depth_warp_pipeline)
     else {
         return;
     };
@@ -372,12 +364,10 @@ pub fn ssdm_gbuffer_warp(
     let Some(blit_r8) = pipeline_cache.get_render_pipeline(post.blit_r8_pipeline) else {
         return;
     };
-    let Some(warp_n) = pipeline_cache.get_render_pipeline(post.prepass_warp_normal_pipeline)
-    else {
+    let Some(warp_n) = pipeline_cache.get_render_pipeline(post.prepass_warp_normal_pipeline) else {
         return;
     };
-    let Some(warp_m) = pipeline_cache.get_render_pipeline(post.prepass_warp_motion_pipeline)
-    else {
+    let Some(warp_m) = pipeline_cache.get_render_pipeline(post.prepass_warp_motion_pipeline) else {
         return;
     };
     let Some(blit_n_pl) = pipeline_cache.get_render_pipeline(post.prepass_blit_normal_pipeline)
@@ -432,9 +422,7 @@ pub fn ssdm_gbuffer_warp(
         &[
             BindGroupEntry {
                 binding: 0,
-                resource: bevy::render::render_resource::BindingResource::Sampler(
-                    &post.sampler,
-                ),
+                resource: bevy::render::render_resource::BindingResource::Sampler(&post.sampler),
             },
             BindGroupEntry {
                 binding: 1,
@@ -459,30 +447,29 @@ pub fn ssdm_gbuffer_warp(
         ],
     );
 
-    let mut mrt_pass =
-        render_context
-            .command_encoder()
-            .begin_render_pass(&RenderPassDescriptor {
-                label: Some("ssdm_gbuffer_warp_mrt"),
-                color_attachments: &[
-                    Some(RenderPassColorAttachment {
-                        view: &gpu_sd.texture_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: Operations::default(),
-                    }),
-                    Some(RenderPassColorAttachment {
-                        view: &gpu_sl.texture_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: Operations::default(),
-                    }),
-                ],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
+    let mut mrt_pass = render_context
+        .command_encoder()
+        .begin_render_pass(&RenderPassDescriptor {
+            label: Some("ssdm_gbuffer_warp_mrt"),
+            color_attachments: &[
+                Some(RenderPassColorAttachment {
+                    view: &gpu_sd.texture_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: Operations::default(),
+                }),
+                Some(RenderPassColorAttachment {
+                    view: &gpu_sl.texture_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: Operations::default(),
+                }),
+            ],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
     mrt_pass.set_pipeline(mrt_pl);
     mrt_pass.set_bind_group(0, &mrt_bg, &[]);
     mrt_pass.draw(0..3, 0..1);
@@ -526,24 +513,23 @@ pub fn ssdm_gbuffer_warp(
                 },
             ],
         );
-        let mut dpass =
-            render_context
-                .command_encoder()
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("ssdm_prepass_depth_warp"),
-                    color_attachments: &[],
-                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                        view: &gpu_sdepth.texture_view,
-                        depth_ops: Some(Operations {
-                            load: LoadOp::Clear(1.0),
-                            store: StoreOp::Store,
-                        }),
-                        stencil_ops: None,
+        let mut dpass = render_context
+            .command_encoder()
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("ssdm_prepass_depth_warp"),
+                color_attachments: &[],
+                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                    view: &gpu_sdepth.texture_view,
+                    depth_ops: Some(Operations {
+                        load: LoadOp::Clear(1.0),
+                        store: StoreOp::Store,
                     }),
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
+                    stencil_ops: None,
+                }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
         dpass.set_pipeline(depth_warp_pl);
         dpass.set_bind_group(0, &d_bg, &[]);
         dpass.draw(0..3, 0..1);
@@ -656,22 +642,21 @@ pub fn ssdm_gbuffer_warp(
                 },
             ],
         );
-        let mut np =
-            render_context
-                .command_encoder()
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("ssdm_warp_normal_scratch"),
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: &gpu_sn.texture_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: Operations::default(),
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
+        let mut np = render_context
+            .command_encoder()
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("ssdm_warp_normal_scratch"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: &gpu_sn.texture_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: Operations::default(),
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
         np.set_pipeline(warp_n);
         np.set_bind_group(0, &n_bg, &[]);
         np.draw(0..3, 0..1);
@@ -687,17 +672,16 @@ pub fn ssdm_gbuffer_warp(
                 ),
             }],
         );
-        let mut np2 =
-            render_context
-                .command_encoder()
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("ssdm_blit_normal_to_prepass"),
-                    color_attachments: &[Some(norm_att.get_unsampled_attachment())],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
+        let mut np2 = render_context
+            .command_encoder()
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("ssdm_blit_normal_to_prepass"),
+                color_attachments: &[Some(norm_att.get_unsampled_attachment())],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
         np2.set_pipeline(blit_n_pl);
         np2.set_bind_group(0, &blit_n_bg, &[]);
         np2.draw(0..3, 0..1);
@@ -735,22 +719,21 @@ pub fn ssdm_gbuffer_warp(
                 },
             ],
         );
-        let mut mp =
-            render_context
-                .command_encoder()
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("ssdm_warp_motion_scratch"),
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: &gpu_sm.texture_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: Operations::default(),
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
+        let mut mp = render_context
+            .command_encoder()
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("ssdm_warp_motion_scratch"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: &gpu_sm.texture_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: Operations::default(),
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
         mp.set_pipeline(warp_m);
         mp.set_bind_group(0, &m_bg, &[]);
         mp.draw(0..3, 0..1);
@@ -766,17 +749,16 @@ pub fn ssdm_gbuffer_warp(
                 ),
             }],
         );
-        let mut mp2 =
-            render_context
-                .command_encoder()
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("ssdm_blit_motion_to_prepass"),
-                    color_attachments: &[Some(mot_att.get_unsampled_attachment())],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
+        let mut mp2 = render_context
+            .command_encoder()
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("ssdm_blit_motion_to_prepass"),
+                color_attachments: &[Some(mot_att.get_unsampled_attachment())],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
         mp2.set_pipeline(blit_m_pl);
         mp2.set_bind_group(0, &blit_m_bg, &[]);
         mp2.draw(0..3, 0..1);
@@ -1311,8 +1293,7 @@ pub fn init_ssdm_post_pipeline(
             (texture_2d(TextureSampleType::Uint),),
         ),
     );
-    let copy_lighting_id_shader =
-        asset_server.load("shaders/ssdm_copy_deferred_lighting_id.wgsl");
+    let copy_lighting_id_shader = asset_server.load("shaders/ssdm_copy_deferred_lighting_id.wgsl");
     let copy_lighting_id_pipeline =
         pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
             label: Some("ssdm_copy_lighting_id".into()),
